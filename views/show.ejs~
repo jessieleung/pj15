@@ -45,5 +45,8 @@
 <button class="w3-btn w3-section w3-teal w3-ripple" onclick="goBack()">Go Back</button>
 </div>
     </body>
-
+<footer>
+<hr/>
+Created by Lau Ka Wing 11245125, Yu Lap Chung 11279510, Hu Jun Hao 11269172
+</footer>
 </html>

@@ -1,13 +1,13 @@
 
-//Created by Hu Jun Hao 11269172, Lau Ka Wing 11245125, Yu Lap Chung 11279510
+
 var http = require('http');
 var url  = require('url');
 var assert = require('assert');
 
 var MongoClient = require('mongodb').MongoClient;
 var ObjectId = require('mongodb').ObjectID;
-var mongourl = 'mongodb://asstudentnumber1:password123@ds119598.mlab.com:19598/comps381fproject';
-//var mongourl = 'mongodb://localhost:27017/test';
+//var mongourl = 'mongodb://asstudentnumber1:password123@ds119598.mlab.com:19598/comps381fproject';
+var mongourl = 'mongodb://localhost:27017/test';
 
 
 var session = require('cookie-session');
@@ -17,7 +17,7 @@ var app = express();
 var bodyParser = require('body-parser');
 
 //middleware
-app.use(session({cookieName: 'session',keys: ['Lau Ka Wing','Yu Lap Chung', 'Hu Jun Hao']}));
+app.use(session({cookieName: 'session',keys: ['MinMin','Kitty', 'Jessie']}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended : true}));
 app.use(fileUpload());
@@ -31,8 +31,17 @@ app.get('/', function(req, res) {
 	}
 });
 
+app.get('/login', function(req, res) {
+	if (!req.session.authenticated) {
+		res.sendFile(__dirname + '/public/login.html');
+	}
+	else {
+		res.redirect('/read');
+	}
+});
+
 //login
-app.post('/login', function(req, res) {
+/*app.post('/login', function(req, res) {
 	var user = req.body.name;
 	var pw = req.body.pw;	
 	var criteria = {"name" : user};
@@ -43,10 +52,43 @@ app.post('/login', function(req, res) {
 				req.session.authenticated = true;
 				req.session.username = req.body.name;
 			}
-			res.redirect('/');
+			res.sendFile(__dirname + '/public/login.html');
 		});
 	});
+});*/
+app.post('/login', function(req,res){
+	//if (!req.session.authenticated) {
+		req.session.authenticated = false;
+		console.log(req.body.password+ ">>pw");console.log(req.body.name+ ">>name");
+		var criteria = {"username": req.body.rname, "password": req.body.pw};
+		MongoClient.connect(mongourl, function(err, db){
+			assert.equal(null, err);
+			findPassword(db, criteria, function(result){
+				if(result == null){
+					res.status(200).end('error ');
+							
+				}else{
+					req.session.authenticated = true;
+					req.session.username = req.body.name;
+					console.log("Authenticated: " + req.session.authenticated + "; Username: " + req.session.username);
+					//res.status(200).end('login successful');	
+					res.redirect('/read');
+				}		
+			});
+		});
+	//}
+	//res.status(200).end('go to restaurant page');
 });
+
+
+/**************************Function for Login******************************************/
+function findPassword(db,criteria,callback){
+	db.collection('user').findOne(criteria, function(err, result){
+		assert.equal(err, null);
+		callback(result);
+	});
+}
+
 
 function findUser(db, criteria, callback) {
 	db.collection('user').findOne(criteria, function(err, result) {
@@ -73,6 +115,7 @@ app.get('/read', function(req, res) {
 			assert.equal(err,null);
 			findRestaurant(db, criteria, function(dbres) {
 				db.close();
+				console.log(dbres+">>");
 				res.render('list.ejs', {
 					res:dbres,
 					user:req.session.username,
@@ -170,7 +213,7 @@ app.post('/change', function(req, res) {
 
 function commitChange(db, id, name, borough, cuisine, street, building, zipcode, lon, lat, bfile, callback) {
 	if (bfile.name != '') {
-		db.collection('res').update({"_id" : ObjectId(id)}, {
+		db.collection('res').updateOne({"_id" : ObjectId(id)}, {
 			$set : {
 				"name" : name,
 				"borough" : borough,
@@ -225,29 +268,66 @@ app.get('/rate', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
 	}
-	else {
-		var resID = req.query.id;
-		res.render('rate.ejs', {res : resID});
+	else {	
+		var criteria = {"_id" : ObjectId(req.query.id)};
+		console.log(req.query.id);
+		MongoClient.connect(mongourl, function(err, db) {
+			assert.equal(err, null);
+			console.log(req.session.username);
+			findOneRestaurant(db, criteria, function(result) { //console.log(result.rate[4].owner + ">>");
+				var isRated = "0";
+				var i = 0;
+				console.log(result.rate);
+				var record;
+				record = result.rate;console.log(record);
+				for (var i = 0; i<record.length; i++){ console.log(record[i].owner + ">>" + req.session.username); 
+				if (record[i].owner == req.session.username){ 
+					isReted = "1";
+					console.log(result.rate.owner);
+					res.status(400).end('cannot rating again');}}
+				if(isRated != "1"){
+					var resID = req.query.id;
+					res.render('rate.ejs', {res : resID});
+				}
+			});
+		});
+		//var resID = req.query.id;
+		//res.render('rate.ejs', {res : resID});
 	}
 });
 
 app.post('/rate', function(req, res) {
 	MongoClient.connect(mongourl, function(err, db) {
 		assert.equal(err, null);
-		addRate(db, req.body.id, req.body.score, req.session.username, function(result) {
+		addRate(db, req.query.id, req.body.score, req.session.username, function(result) {
+			console.log(result);
 			db.close();
 			res.redirect('/read');
 		});
 	});
 });
 
+
+function isRating(db, userName, resID, callback){
+
+	/*db.collection('user').findOne(criteria, function(err, result) {
+		assert.equal(err, null);
+		callback(result);
+	});*/
+	db.collection('res').find({ "_id": ObjectId(resID), "rate.owner": userName}, function(err, result) {
+		assert.equal(err, null);
+		callback(result);
+	});
+}
+
 function addRate(db, resID, resScore, rateOwner, callback) {
 	db.collection('res').update(
-		{"id" : resID}, 
+		{"_id" : ObjectId(resID)}, 
 		{$push: {
-			rate: {
-				score : resScore,
-				owner : rateOwner
+			rate:{
+				owner : rateOwner,
+				score: resScore,
+				isRated : "1"
 			}
 		}}, 
 		function(err,result) {
@@ -286,7 +366,7 @@ app.post('/create', function(req, res) {
 	MongoClient.connect(mongourl, function(err, db) {
 		assert.equal(null, err);
 		findOneRestaurant(db, criteria, function(dbres) {
-			if(dbres == null) {
+			//if(dbres == null) {
 				create(db, req.session.username, req.body.name, req.body.borough, req.body.cuisine, req.body.street, req.body.building, req.body.zipcode, req.body.lon, req.body.lat, req.files.sampleFile, function(result) {
 					db.close();
 					if (result.insertedId != null) {
@@ -298,13 +378,32 @@ app.post('/create', function(req, res) {
 						res.end(JSON.stringify(result));
 					}
 				});
-			}
-			else {
-				res.sendFile(__dirname + '/public/error.html');
-			}
+			//}
+			//else {
+			//	res.sendFile(__dirname + '/public/error.html');
+			//}
 		});
 	});
 });
+
+/*function createRate(db, resID, callback){
+	db.collection('rate').insertOne({
+		"score": "",
+		"owner": "",
+		"resID": resID
+	}, function(err, result) {
+		if (err) {
+			result = err;
+			console.log("insertOne error: " + JSON.stringify(err));
+		}
+		else {
+		  	console.log("status : OK,");
+			console.log("_id : " + result.insertedId);
+		}
+		callback(result);
+	});
+}*/
+
 
 function create(db, owner, name, borough, cuisine, street, building, zipcode, lon, lat, bfile, callback) {
 	db.collection('res').insertOne({
@@ -317,6 +416,8 @@ function create(db, owner, name, borough, cuisine, street, building, zipcode, lo
 		"coor" : [lon,lat],
 		"data" : new Buffer(bfile.data).toString('base64'),
 		"mimetype" : bfile.mimetype,
+		"rate" : [{"owner": "", "isRated": "", "score": ""}]
+		
 	}, function(err, result) {
 		if (err) {
 			result = err;
@@ -338,21 +439,38 @@ app.get('/remove', function(req, res, callback) {
 	else {
 		MongoClient.connect(mongourl, function(err, db) {
 		assert.equal(null, err);
-			deleteRes(db, req.query.id, req.session.username, function(result) {
-				db.close();
-				res.sendFile(__dirname + '/public/finish.html');
+			findOneRestaurant(db, {"_id": ObjectId(req.query.id)}, function(result){ console.log(result.owner);
+				if(result.owner == req.session.username){
+					deleteRes(db, req.query.id, req.session.username, function(result2) {
+						db.close();res.sendFile(__dirname + '/public/finish.html');
+						//console.log(result2);
+						/*if(result != null){
+							res.sendFile(__dirname + '/public/finish.html');}
+						else{
+							res.status(400).end('you are not a owner');}*/
+					});
+				}else{res.status(400).end('you are not a owner');}
+
+
 			});
+			
 		});
 	}
 });
 
 function deleteRes(db,target,owner,callback) {
-	db.collection('res').remove({"_id" : ObjectId(target), "owner" : owner}, function(err,result) {
+	db.collection('res').remove({"_id" : ObjectId(target), "owner" : owner}, function(err,result) {console.log(err+">>err1");
 		if (err) {
-			result = err;
+			result = null;
+			console.log(err+">>err");
+			console.log(result+">>result");	callback(result);
 		}
 		callback(result);
+		
 	});
+
+
+	
 }
 
 //register
