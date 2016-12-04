@@ -1,0 +1,22 @@
+{
+  "name": "COMP381ff183Pcomp",
+  "description": "COMPS381F-GroupProject",
+  "version": "0.0.1",
+  "dependencies": {
+    "mongodb": "latest",
+    "express": "latest",
+    "express-fileupload": "latest",
+    "cookie-session": "latest",
+    "ejs": "latest",
+    "body-parser": "latest"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engine": "*",
+  "devDependencies": {
+    "debug": "^2.3.3"
+  }
+}
+
+
