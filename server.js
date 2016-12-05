@@ -6,8 +6,8 @@ var assert = require('assert');
 
 var MongoClient = require('mongodb').MongoClient;
 var ObjectId = require('mongodb').ObjectID;
-//var mongourl = 'mongodb://asstudentnumber1:password123@ds119598.mlab.com:19598/comps381fproject';
-var mongourl = 'mongodb://localhost:27017/test';
+var mongourl = 'mongodb://jessieleung:aa1234@ds159767.mlab.com:59767/pj';
+//var mongourl = 'mongodb://localhost:27017/test';
 
 
 var session = require('cookie-session');
@@ -40,22 +40,7 @@ app.get('/login', function(req, res) {
 	}
 });
 
-//login
-/*app.post('/login', function(req, res) {
-	var user = req.body.name;
-	var pw = req.body.pw;	
-	var criteria = {"name" : user};
-	MongoClient.connect(mongourl, function(err, db) {
-		assert.equal(err,null);
-		findUser(db, criteria, function(result) {
-			if(result.name == user && result.password == pw) {
-				req.session.authenticated = true;
-				req.session.username = req.body.name;
-			}
-			res.sendFile(__dirname + '/public/login.html');
-		});
-	});
-});*/
+
 app.post('/login', function(req,res){
 	//if (!req.session.authenticated) {
 		req.session.authenticated = false;
@@ -97,13 +82,13 @@ function findUser(db, criteria, callback) {
 	});
 }
 
-//logout
+//-----------------------------------logout------------------------------------
 app.get('/logout', function(req, res, next) {
 	req.session = null;
 	res.redirect('/');
 });
 
-//list collections
+//-------------------------------list collections---------------------------------------------
 app.get('/read', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -141,7 +126,7 @@ function findRestaurant(db, criteria, callback) {
 		});
 }
 
-//show details
+//---------------------------------show details----------------------------------------
 app.get('/detail', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -165,7 +150,7 @@ function findDetail(db, target, callback) {
 	});
 }
 
-//update information
+//---------------------------------update information-------------------------------------
 app.get('/change', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -193,68 +178,175 @@ function changeInfo(db, target, callback) {
 	});
 }
 
-app.post('/change', function(req, res) {
+app.post('/change', function(req,res){
+	console.log(req.body.id);
+	var sampleFile;
+	var bfile = req.files.sampleFile;
+	var updateRestaurants = function(db, callback) {
+	   db.collection('res').updateOne(
+	      { "_id": ObjectId(req.body.id)},
+	      {
+		$set: {"name": req.body.name, "cuisine": req.body.cuisine, "borough": req.body.borough, "owner": req.session.username,
+			"street": req.body.street, 
+			"zipcode": req.body.zipcode, 
+			"building": req.body.building, 
+			"coor": [req.body.lon,  req.body.lat]}
+	      }, function(err, results) {
+	      console.log(results);
+	      callback();
+	   });
+	};
+
+	var updateFile = function(db, callback) {
+	db.collection('res').updateOne(
+	      { "_id": ObjectId(req.body.id)},
+	      {
+		$set: {	"data" : new Buffer(bfile.data).toString('base64'), "mimetype" : bfile.mimetype}
+	      }, function(err, results) {
+	     // console.log(results);
+	      callback();
+	   });
+	};
+
 	MongoClient.connect(mongourl, function(err, db) {
-	assert.equal(null, err);
-		checkName(db, req.body.name, function(result) {
-			if(result == null) {
-				res.sendFile(__dirname + '/public/error.html');
-			}
-			else {	
-				commitChange(db, req.body.id, req.body.name, req.body.borough, req.body.cuisine, req.body.street, req.body.building, req.body.zipcode, req.body.lon, req.body.lat, req.files.sampleFile, function(result) {
-			 		db.close();
-					res.status(200);
-					res.redirect('/detail?id=' + req.body.id);
-				});
-			}
-		});
+	  assert.equal(null, err);
+	
+	  updateRestaurants(db, function() {
+	    db.close();
+	    res.status(200).end('updated!');
+	  });
+	if(bfile.name!=''){
+		console.log(bfile.data);
+		updateFile(db, function() {
+	    db.close();
+	    res.status(200).end('photo updated!');
+	  });
+	}
 	});
+
+	
 });
 
-function commitChange(db, id, name, borough, cuisine, street, building, zipcode, lon, lat, bfile, callback) {
-	if (bfile.name != '') {
-		db.collection('res').updateOne({"_id" : ObjectId(id)}, {
-			$set : {
-				"name" : name,
-				"borough" : borough,
-				"cuisine" : cuisine,
-				"street" : street,
-				"building" : building,
-				"zipcode" : zipcode,
-				"coor" : [lon,lat],
-				"data" : new Buffer(bfile.data).toString('base64'),
-				"mimetype" : bfile.mimetype
-			}
-		}, function(err,result) {
-				if (err) {
-					result = err;
-					console.log("Update error: " + JSON.stringify(err));
-				}
-				callback(result);
-			}
-		);
-	}
-	else {
-		db.collection('res').update({"_id" : ObjectId(id)}, {
-			$set : {
-				"name" : name,
-				"borough" : borough,
-				"cuisine" : cuisine,
-				"street" : street,
-				"building" : building,
-				"zipcode" : zipcode,
-				"coor" : [lon,lat]
-			}
-		}, function(err, result) {
-				if (err) {
-					result = err;
-					console.log("Update error: " + JSON.stringify(err));
-				}
-				callback(result);
-			}
-		);
-	}
-}
+//--------------------------------------------search-----------------------------------------
+app.get('/search', function(req,res){
+	res.sendFile(__dirname + '/public/search.html');
+});
+app.post('/searchname', function(req,res){
+	console.log(req.body.name + "name");
+	//var criteria = {};
+	if(req.body.name != ''){
+		var criteria = {"name" : req.body.name};
+
+	var findRestaurant = function(db, callback) {
+		 var cursor = db.collection('res').find( { "name": req.body.name  } );
+		 cursor.toArray(function(err, doc) {
+		      assert.equal(err, null);
+				var record ;
+		      if (doc != null) {
+			console.dir(doc); 
+			record = doc;
+			console.log(doc.name);
+			//res.status(200).end(doc);
+			res.render('list.ejs', {	
+						res:record,
+						user:req.session.username,
+						criteria:JSON.stringify(criteria)
+						});
+	
+		      } else {
+			 callback();
+		      }
+		   });
+	};
+
+	MongoClient.connect(mongourl, function(err, db) {
+	  assert.equal(null, err);
+	  findRestaurant(db, function() {
+	      db.close();
+	  });
+	});
+	}else {
+		res.status(200).end('no search');
+		}
+});
+app.post('/searchb', function(req,res){
+	console.log(req.body.borough + "borough");
+	//var criteria = {};
+	if(req.body.borough != ''){
+		var criteria = {"borough" : req.body.borough};
+
+	var findRestaurant = function(db, callback) {
+		 var cursor = db.collection('res').find( { "borough": req.body.borough  } );
+		 cursor.toArray(function(err, doc) {
+		      assert.equal(err, null);
+				var record ;
+		      if (doc != null) {
+			console.dir(doc); 
+			record = doc;
+			console.log(doc.borough);
+			//res.status(200).end(doc);
+			res.render('list.ejs', {	
+						res:record,
+						user:req.session.username,
+						criteria:JSON.stringify(criteria)
+						});
+	
+		      } else {
+			 callback();
+		      }
+		   });
+	};
+
+	MongoClient.connect(mongourl, function(err, db) {
+	  assert.equal(null, err);
+	  findRestaurant(db, function() {
+	      db.close();
+	  });
+	});
+	}else {
+		res.status(200).end('no search');
+		}
+});
+app.post('/searchc', function(req,res){
+	console.log(req.body.cuisine + "cuisine");
+	//var criteria = {};
+	if(req.body.cuisine != ''){
+		var criteria = {"borough" : req.body.cuisine};
+
+	var findRestaurant = function(db, callback) {
+		 var cursor = db.collection('res').find( { "cuisine": req.body.cuisine  } );
+		 cursor.toArray(function(err, doc) {
+		      assert.equal(err, null);
+				var record ;
+		      if (doc != null) {
+			console.dir(doc); 
+			record = doc;
+			console.log(doc.cuisine);
+			//res.status(200).end(doc);
+			res.render('list.ejs', {	
+						res:record,
+						user:req.session.username,
+						criteria:JSON.stringify(criteria)
+						});
+	
+		      } else {
+			 callback();
+		      }
+		   });
+	};
+
+	MongoClient.connect(mongourl, function(err, db) {
+	  assert.equal(null, err);
+	  findRestaurant(db, function() {
+	      db.close();
+	  });
+	});
+	}else {
+		res.status(200).end('no search');
+		}
+});
+
+
 
 function checkName(db, target, callback) {
 	db.collection('res').findOne({"name" : target}, function(err, result) {
@@ -263,7 +355,7 @@ function checkName(db, target, callback) {
 	});
 }
 
-//rate
+//------------------------------Rate-------------------------------------------------
 app.get('/rate', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -340,7 +432,7 @@ function addRate(db, resID, resScore, rateOwner, callback) {
 	);
 }
 
-//display on map
+//--------------------display on map-------------------------------------------------
 app.get('/gmap', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -350,7 +442,7 @@ app.get('/gmap', function(req, res) {
 	}
 });
 
-//add collections
+//------------------------------add collections-----------------------------------------
 app.get('/new', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -386,23 +478,7 @@ app.post('/create', function(req, res) {
 	});
 });
 
-/*function createRate(db, resID, callback){
-	db.collection('rate').insertOne({
-		"score": "",
-		"owner": "",
-		"resID": resID
-	}, function(err, result) {
-		if (err) {
-			result = err;
-			console.log("insertOne error: " + JSON.stringify(err));
-		}
-		else {
-		  	console.log("status : OK,");
-			console.log("_id : " + result.insertedId);
-		}
-		callback(result);
-	});
-}*/
+
 
 
 function create(db, owner, name, borough, cuisine, street, building, zipcode, lon, lat, bfile, callback) {
@@ -431,7 +507,7 @@ function create(db, owner, name, borough, cuisine, street, building, zipcode, lo
 	});
 }
 
-//remove record
+//---------------------------------remove record------------------------------------------------
 app.get('/remove', function(req, res, callback) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -473,7 +549,7 @@ function deleteRes(db,target,owner,callback) {
 	
 }
 
-//register
+//-----------------------------------register-----------------------------------------
 app.get('/register', function(req, res, callback){
 	res.sendFile(__dirname + '/public/register.html');
 });
@@ -506,7 +582,7 @@ function createUser(db, name, pw, callback) {
 	});
 }
 
-//read by api
+//---------------------------read by api-----------------------------------------------
 app.get('/api/read/:field/:value', function(req, res) {
 	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
@@ -531,7 +607,7 @@ app.get('/api/read/:field/:value', function(req, res) {
 	}
 });
 
-//create by api
+//----------------------------create by api----------------------------------------------
 app.post('/api/create', function(req, res) {
 	var criteria = {"name" : req.body.name};
 	MongoClient.connect(mongourl, function(err, db) {

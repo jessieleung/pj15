@@ -1,0 +1,48 @@
+<html>
+
+<head>
+	<title>Register</title>
+	<link rel="stylesheet" type="text/css" href="http://www.w3schools.com/lib/w3.css">
+	<script>function goBack() {window.history.back();}</script>
+</head>
+
+<body>
+	<div class="w3-container w3-teal">
+		<h2>Search</h2>
+		<a href="/">Home</a>
+	</div>
+
+	<form action="/searchname" method="Post" encType="multipart/form-data" class="w3-container" style="width:100%">
+	<p>
+		<input class="w3-input" type="text" name="name" id="name" />
+		<label class="w3-label w3-validate" for="name">Restaurant Name</label>
+		
+	</p>
+		<input type="Submit" value="Search Name"/>
+	</form>
+	<form action="/searchb" method="Post" encType="multipart/form-data" class="w3-container" style="width:100%">
+	<p>
+		<input class="w3-input" type="text" name="borough" id="borough"/>
+		<label class="w3-label w3-validate" for="borough">Borough</label>
+
+	</p>
+		<input type="Submit" value="Search Borough"/>
+	</form>
+	<form action="/searchc" method="Post" encType="multipart/form-data" class="w3-container" style="width:100%">
+		
+	<p>
+		<input class="w3-input" type="text" name="cuisine" id="cuisine"/>
+		<label class="w3-label w3-validate" for="cuisine">Cuisine</label>
+
+	</p>
+		<input type="Submit" value="Search Cuisine"/>
+
+	</form>
+</body>
+
+<footer>
+	<hr/>
+	Created by Lau Ka Wing 11245125, Yu Lap Chung 11279510, Hu Jun Hao 11269172
+</footer>
+
+</html>
