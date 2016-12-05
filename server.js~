@@ -597,10 +597,10 @@ function createUser(db, name, pw, callback) {
 
 //---------------------------read by api-----------------------------------------------
 app.get('/api/read/:field/:value', function(req, res) {
-	/*if (!req.session.authenticated) {
+	if (!req.session.authenticated) {
 		res.sendFile(__dirname + '/public/login.html');
 	}
-	else {*/
+	else {
  		MongoClient.connect(mongourl, function(err, db) {
 			assert.equal(err, null);	
 			var field = req.params.field;
@@ -617,7 +617,7 @@ app.get('/api/read/:field/:value', function(req, res) {
 				res.end(JSON.stringify(dbres));
 			});
 		});
-	//}
+	}
 });
 
 //----------------------------create by api----------------------------------------------
@@ -674,4 +674,6 @@ function findOneRestaurant(db, criteria, callback) {
 	});
 }
 
-app.listen(process.env.PORT||8099);
+app.listen(8099, function() {
+	console.log('The server is waiting for request');
+});

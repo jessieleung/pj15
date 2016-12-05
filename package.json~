@@ -13,8 +13,10 @@
   "scripts": {
     "start": "node server.js"
   },
-  "engine": "*"
-  
+  "engine": "*",
+  "devDependencies": {
+    "debug": "^2.3.3"
+  }
 }
 
 
